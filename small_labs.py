@@ -72,9 +72,9 @@ def slfile_to_csv(file_sl, file_csv = None, ext = '.csv', folder_dest = None):
     Parameters
     ----------
     file_sl : str
-        .mat filename.
+        .mat filename. Full path.
     file_csv : str, optional
-        Name of new file where data is to be stored as .csv
+        Name of new file where data is to be stored as .csv. Full path.
     ext : str, optional
         Bit of text added to end of new .csv name. Default is '.csv'.
     folder_dest : str, optional
@@ -119,3 +119,68 @@ def slfile_to_csv_batch(folder_sl, pattern_sl = '*_fits.mat', ext = '.csv', fold
     files_sl = glob(join(folder_sl, pattern_sl))
 
     [slfile_to_csv(file, ext=ext, folder_dest=folder_dest) for file in files_sl]
+
+def df_to_sl(df, col_mapper = None):
+    """
+    Convert pandas DataFrame to SMALL-LABS .mat format.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+    col_mapper : dict
+        Keys are columns in df, values are new names in SMALL-LABS format. Used if, for example,
+        columns in df, 'x' and 'y', need to be re-labeled 'col' and 'row', respectively, 
+        for use in NOBIAS.
+        Example:
+            col_mapper = {'x': 'col', 'y': 'row', 'n': 'track_id', 'rois': 'roinum}
+        
+        Columns 'frame', 'row', 'col', 'track_id', and 'roinum' are required to generate tracks.
+
+    Returns
+    -------
+    data_sl : dict
+        Orgainized like SMALL-LABS data structure. 
+        First level keys: 'fits', 'tracks'.
+        Second level: 'fits' additional keys matching columns in df after renaming.
+    """
+    if col_mapper is not None:
+        data = df.rename(columns=col_mapper) # makes a copy of df
+    else:
+        data = df
+
+    data_sl = {}
+
+    fits_dict = {c: data[c].values for c in data.columns} # may need to play with axes ordering
+    data_sl['fits'] = fits_dict
+
+    if set(('frame', 'row', 'col', 'track_id', 'roinum')).issubset(data.columns):
+        tracks = np.zeros([len(data), 6])
+        tracks[:,0] = data['frame'].values
+        tracks[:,1] = data['row'].values
+        tracks[:,2] = data['col'].values
+        tracks[:,3] = data['track_id'].values
+        tracks[:,4] = data['roinum'].values
+        if 'molid' in data.columns:
+            tracks[:,5] = data['molid'].values
+        else:
+            tracks[:,5] = data.index.values
+        data_sl['tracks'] = tracks
+
+    return data_sl
+
+def save_sl_fits(data_sl, file_sl):
+    """
+    Save dict structured SMALL-LABS-like as .mat. Wrapper around hdf5storage.savemat.
+
+    Parameters
+    ----------
+    data_sl : dict
+    file_sl : name of file where data_sl is to be save. Should end with '.mat'.
+
+    Returns
+    -------
+    None
+    """
+    hdf5storage.savemat(file_name = file_sl, mdict = data_sl, format = '7.3')
+
+
