@@ -44,19 +44,19 @@ def median_step_size(locs_df, frame_col='frame', coord_cols=['x', 'y'], track_co
     track_ids : np.ndarray
     """
     track_ids = np.unique(locs_df['track_id'].values)
-    frames_all = locs_df[frame_col].values
-    x_all = locs_df[coord_cols[0]].values
-    y_all = locs_df[coord_cols[1]].values
+    frames = locs_df[frame_col].values
+    x = locs_df[coord_cols[0]].values
+    y = locs_df[coord_cols[1]].values
 
     d_med = np.zeros(len(track_ids))
     for i, track_id in enumerate(track_ids):
         track_filt = locs_df[track_col].values == track_id
         if track_filt.sum() > 1:
-            frames = frames_all[track_filt]
-            x = x_all[track_filt]
-            y = y_all[track_filt]
-            d = np.sqrt((x[1:] - x[:-1])**2 + (y[1:] - y[:-1])**2)
-            d = d[frames[1:] - frames[:-1] == 1]
+            frames_track = frames[track_filt]
+            x_track = x[track_filt]
+            y_track = y[track_filt]
+            d = np.sqrt((x_track[1:] - x_track[:-1])**2 + (y_track[1:] - y_track[:-1])**2)
+            d = d[frames_track[1:] - frames_track[:-1] == 1]
             d_med[i] = np.median(d)
         else:
             d_med[i] = np.nan

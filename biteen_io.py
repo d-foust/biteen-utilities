@@ -313,7 +313,7 @@ def df_to_sl(df, col_mapper = None):
         columns in df, 'x' and 'y', need to be re-labeled 'col' and 'row', respectively, 
         for use in NOBIAS.
         Example:
-            col_mapper = {'x': 'col', 'y': 'row', 'n': 'track_id', 'rois': 'roinum}
+            col_mapper = {'x': 'col', 'y': 'row', 'n': 'track_id', 'rois': 'roinum'}
         
         Columns 'frame', 'row', 'col', 'track_id', and 'roinum' are required to generate tracks.
 
@@ -363,3 +363,71 @@ def save_sl_fits(data_sl, file_sl):
     None
     """
     hdf5storage.savemat(file_name = file_sl, mdict = data_sl, format = '7.3')
+
+def sl_to_so(data_sl, pixel_size=0.049, t_frame=0.04):
+    """
+    Convert tracks in SMALL-LABS-style dict to numpy array format expected by Spot-On.
+
+    Parameters
+    ----------
+    data_sl : dict
+    pixel_size : float
+        Spot-On expects coordinates in be in micron, so um/pixel required to convert.
+    t_frame : float
+        Time between frames in seconds.
+
+    Returns
+    -------
+    so_tracks : np.array, dtype=[('xy', 'O'), ('TimeStamp', 'O'), ('Frame', 'O')]
+        Spot-On formatted tracks
+    """
+    if 'tracks' in data_sl.keys():
+        data_np = data_sl['tracks'][:].T # numpy array
+        if data_np.ndim == 2: # False if SMALL-LABS didn't find any tracks
+            xy = data_np[:,1:3] * pixel_size
+            frames = (data_np[:,:1].T).astype('int')
+            times = frames * t_frame
+            track_ids = data_np[:,3]
+            unique_track_ids = np.unique(track_ids)
+            so_tracks = [(xy[track_ids==ti], times[track_ids==ti], frames[track_ids==ti]) for ti in unique_track_ids]
+            so_tracks = np.array(so_tracks, dtype=[('xy', 'O'), ('TimeStamp', 'O'), ('Frame', 'O')])
+        else:
+            so_tracks = np.array([])
+    else:
+        so_tracks = np.array([])
+
+    return so_tracks
+
+def df_to_so(data_df, frame_col='frame', coord_cols=['x', 'y'], track_col='track_id', pixel_size=1, t_frame=0.04):
+    """
+    Convert tracks in pandas DataFrame to numpy array format expected by Spot-On.
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        Tracking data.
+    frame_col : str
+        Column containing frame number.
+    coord_cols : List[str]
+        Column names for 'x' and 'y' coordinates, respectively.
+    track_col : str
+    pixel_size : float
+        For converting to um.
+    t_frame : float
+        Time between frames in seconds.
+
+    Returns
+    -------
+    so_tracks : np.array, dtype=[('xy', 'O'), ('TimeStamp', 'O'), ('Frame', 'O')]
+        Spot-On formatted tracks
+    """
+    frames = data_df[frame_col].values
+    xy = data_df[coord_cols].values * pixel_size
+    frames = (data_df[frame_col].values).astype('int')
+    times = frames * t_frame
+    track_ids = data_df[track_col].values
+    unique_track_ids = np.unique(track_ids)
+    so_tracks = [(xy[track_ids==ti], times[track_ids==ti], frames[track_ids==ti]) for ti in unique_track_ids]
+    so_tracks = np.array(so_tracks, dtype=[('xy', 'O'), ('TimeStamp', 'O'), ('Frame', 'O')])
+
+    return so_tracks
