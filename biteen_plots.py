@@ -1,29 +1,30 @@
 """
 
 """
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from skimage.measure import find_contours, regionprops
 
-def plot_trajectories(locs_df,
-                      track_data = None,
-                      track_col = 'track_id',
-                      track_data_bins = np.array([[-np.inf, np.inf]]),
-                      track_data_colors = None,
-                      order = 'forward',
-                      scale = 1,
-                      labels = None,
-                      image = None,
-                      subsample = None,
-                      line_props = {},
-                      separate = False,
-                      crop = False,
-                      figure_props = {},
-                      scalebar_props = None):
+def plot_tracks(locs_df,
+                track_data = None,
+                track_col = 'track_id',
+                track_data_bins = np.array([[-np.inf, np.inf]]),
+                track_data_colors = None,
+                order = 'forward',
+                scale = 1,
+                labels = None,
+                image = None,
+                subsample = None,
+                line_props = {},
+                separate = False,
+                crop = False,
+                figure_props = {},
+                scalebar_props = None):
     """
-    Plot single-molecule trajectories.
+    Plot single-molecule tracks.
 
     Parameters
     ----------
@@ -65,7 +66,7 @@ def plot_trajectories(locs_df,
         track_data = track_data.loc[idx_sub].reset_index()
 
     if labels is not None:
-        contours = get_contours(labels)
+        contours = labels_to_contours(labels)
     else:
         contours = []
 
@@ -104,10 +105,10 @@ def plot_trajectories(locs_df,
                 ax[i_ax].plot(x*scale, y*scale, color=track_data_colors[i_ax%n_colors], **line_props)
 
             if crop == True:
-                crop_to_cells(ax[i_ax], labels)
+                crop_to_labels(ax[i_ax], labels)
 
             if scalebar_props is not None:
-                plot_scalebar(ax[i_ax], scalebar_props)
+                add_scalebar(ax[i_ax], scalebar_props)
 
     elif separate == False:
         fig, ax = plt.subplots(1, 1, **figure_props)
@@ -133,27 +134,34 @@ def plot_trajectories(locs_df,
                 ax.plot(x*scale, y*scale, color=track_data_colors[i%n_colors], **line_props)
                 
         if crop == True:
-            crop_to_cells(ax, labels)
+            crop_to_labels(ax, labels)
 
         if scalebar_props is not None:
-            plot_scalebar(ax, scalebar_props)
+            add_scalebar(ax, scalebar_props)
 
     return fig, ax
 
-def get_contours(rois):
+def labels_to_contours(rois, level=0.5):
     """
+
+    Parameters
+    ----------
     rois : 2d integer array. 0 for background pixels.
+
+    Returns
+    -------
+    contours : list[np.array(shape=(N,2))]
     """
     num_rois = rois.max()
     contours = []
     for r in range(1, num_rois+1):
         roi = rois == r
-        contour = find_contours(roi, level=0.01)
+        contour = find_contours(roi, level=level)
         contours.append(contour)
         
     return contours
 
-def plot_scalebar(ax, scalebar_props):
+def add_scalebar(ax, scalebar_props):
     
     xmin, xmax = ax.get_xlim()
     ymax, ymin = ax.get_ylim()
@@ -175,14 +183,45 @@ def plot_scalebar(ax, scalebar_props):
                  edgecolor=scalebar_props['edgecolor'],
                  facecolor=scalebar_props['facecolor']))
     
-def crop_to_cells(ax, cell_labels, crop_buffer=5):
+def crop_to_labels(ax, labels, crop_buffer=5):
     """
+    Set limits of ax so that only bounding box of cell_labels is shown with crop_buffer number of
+    pixels added to border.
+
+    Parameters
+    ----------
+    ax : matplotlib axis handle
+    labels : np.array, dtype=int
+    crop_buffer : int
+        Extra pixels to leave around bounding box.
+
+    Returns
+    -------
+    None
     """
-    cell_bool = (cell_labels > 0).astype('int')
-    rowmin, colmin, rowmax, colmax = regionprops(cell_bool)[0]['bbox']
+    labels_bool = (labels > 0).astype('int')
+    rowmin, colmin, rowmax, colmax = regionprops(labels_bool)[0]['bbox']
     
     xmin, xmax = colmin-crop_buffer-0.5, colmax+crop_buffer+0.5
     ymin, ymax = rowmin-crop_buffer-0.5, rowmax+crop_buffer+0.5
     
     ax.set_xlim(left=xmin, right=xmax)
     ax.set_ylim(bottom=ymax, top=ymin)
+
+def plots_to_pdf(figures, save_name):
+    """
+    Save series of figures to pdf where each figure is on a single page.
+
+    Parameters
+    ----------
+    figures : List[matplotlib figure objects]
+    savename : str, Path
+
+    Returns
+    -------
+    None
+    """
+    image_pdf = PdfPages(save_name)
+    for fig in figures:
+        image_pdf.savefig(fig)
+    image_pdf.close()
