@@ -141,22 +141,55 @@ def plot_tracks(locs_df,
 
     return fig, ax
 
-def labels_to_contours(rois, level=0.5):
+def plot_locs_scatter():
+    """
+    Plots localizations as markers.
+
+    Parameters
+    ----------
+    
+
+    Returns
+    -------
+    fig
+    ax
+    """
+    pass
+
+def plot_locs_blur():
+    """
+    Plots localizations with each represented by a Gaussian distribtuion.
+
+    Parameters
+    ----------
+    
+
+    Returns
+    -------
+    fig
+    ax
+    """
+    pass
+
+def labels_to_contours(labels, level=0.5):
     """
 
     Parameters
     ----------
-    rois : 2d integer array. 0 for background pixels.
+    labels : np.array(dtype=int)
+    level : float, (0, 1)
 
     Returns
     -------
     contours : list[np.array(shape=(N,2))]
+        Length of contours matches number of rois
+        Columns of each array contain rows and columns, respectively.
     """
-    num_rois = rois.max()
+    n_labels = labels.max()
     contours = []
-    for r in range(1, num_rois+1):
-        roi = rois == r
-        contour = find_contours(roi, level=level)
+    for l in range(1, n_labels+1):
+        label = labels == l
+        contour = find_contours(label, level=level)
         contours.append(contour)
         
     return contours
