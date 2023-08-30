@@ -10,6 +10,7 @@ from skimage.measure import find_contours, regionprops
 
 def plot_tracks(locs_df,
                 track_data = None,
+                coord_cols=('x', 'y'),
                 track_col = 'track_id',
                 track_data_bins = np.array([[-np.inf, np.inf]]),
                 track_data_colors = None,
@@ -57,6 +58,9 @@ def plot_tracks(locs_df,
     ax
         Matplotlib axis handle(s).
     """
+    xcol = coord_cols[0]
+    ycol = coord_cols[1]
+
     if track_data is None:
         track_ids = np.unique(locs_df['track_id'])
         track_data = pd.DataFrame(data={'track_id': np.unique(track_ids)})
@@ -71,8 +75,8 @@ def plot_tracks(locs_df,
         contours = []
 
     if image is None and labels is None:
-        colmax = int(np.max(locs_df['x']*scale)) + 1
-        rowmax = int(np.max(locs_df['y']*scale)) + 1
+        colmax = int(np.max(locs_df[xcol]*scale)) + 1
+        rowmax = int(np.max(locs_df[ycol]*scale)) + 1
         image = np.zeros([rowmax, colmax])
     elif image is None:
         image = np.zeros(labels.shape)
@@ -156,7 +160,7 @@ def plot_locs_scatter():
     """
     pass
 
-def plot_locs_blur():
+def plot_locs_gaussian():
     """
     Plots localizations with each represented by a Gaussian distribtuion.
 
