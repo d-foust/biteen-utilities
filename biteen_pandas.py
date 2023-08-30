@@ -70,7 +70,7 @@ def locs_to_steps(locs_df, frame_col='frame', coord_cols=('x', 'y'), track_col='
 
 def median_step_size(locs_df, frame_col='frame', coord_cols=['x', 'y'], track_col='track_id'):
     """
-    Finds median step size for each unique track in locs_df
+    Finds median step size for each unique track in locs_df.
 
     Parameters
     ----------

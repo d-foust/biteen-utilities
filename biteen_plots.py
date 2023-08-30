@@ -145,20 +145,66 @@ def plot_tracks(locs_df,
 
     return fig, ax
 
-def plot_locs_scatter():
+def plot_locs_scatter(locs_df,
+                        coord_cols=('x', 'y'),
+                        color_col = None,
+                        scale = 1,
+                        labels = None,
+                        image = None,
+                        crop = False,
+                        figure_props = {},
+                        marker_props = {},
+                        scalebar_props = None):
     """
-    Plots localizations as markers.
-
+    
+    
     Parameters
     ----------
-    
+    marker_props : dict
+        kwargs to matplotlib.pyplot.scatter
 
     Returns
     -------
-    fig
-    ax
+
     """
-    pass
+    xcol, ycol = coord_cols
+
+    if color_col is None: colors = None
+    else: colors = locs_df[color_col]
+
+    if 'c' not in marker_props:
+        marker_props['c'] = colors
+
+    if labels is not None:
+        contours = labels_to_contours(labels)
+    else:
+        contours = []
+
+    if image is None and labels is None:
+        colmax = int(np.max(locs_df[xcol]*scale)) + 1
+        rowmax = int(np.max(locs_df[ycol]*scale)) + 1
+        image = np.zeros([rowmax, colmax])
+    elif image is None:
+        image = np.zeros(labels.shape)
+
+    fig, ax = plt.subplots(1, 1, **figure_props)
+        
+    ax.imshow(image, cmap='binary_r')
+    
+    for contour in contours:
+        ax.plot(contour[0][:,1], contour[0][:,0], lw=1, alpha=0.5, color='xkcd:gray')
+
+    ax.scatter(locs_df[xcol]*scale, locs_df[ycol]*scale, **marker_props)
+            
+    if crop == True:
+        crop_to_labels(ax, labels)
+
+    if scalebar_props is not None:
+        add_scalebar(ax, scalebar_props)
+
+    ax.axis('off')
+
+    return fig, ax
 
 def plot_locs_gaussian():
     """
@@ -245,7 +291,7 @@ def crop_to_labels(ax, labels, crop_buffer=5):
     ax.set_xlim(left=xmin, right=xmax)
     ax.set_ylim(bottom=ymax, top=ymin)
 
-def plots_to_pdf(figures, save_name):
+def figs_to_pdf(figures, save_name):
     """
     Save series of figures to pdf where each figure is on a single page.
 
