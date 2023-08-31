@@ -25,9 +25,11 @@ Plotting single-molecule data.
 * Plot trajectories overlayed on image data, e.g. phase contrast
 
 ## Future
-* dpsp
+* dpsp related format conversions
 * drift correction with RCC
 * registration
 * using napari
 * MSD
 * using NOBIAS output
+* heatmaps
+* rotation to align with cell axes
