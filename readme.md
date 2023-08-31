@@ -5,7 +5,7 @@ A repository for common coding tasks in the Biteen Lab.
 Reading, writing, and converting between different file types. 
 * convert .nd2 to .tif
 * convert .nd2 to .npy
-* read cellpose .npy
+* extract ROIs from cellpose .npy into 2d numpy array
 * convert cellpose .npy to .mat (SMALL-LABS format)
 * convert SMALL-LABS output (*_fits.mat, *_guesses.mat) to pandas DataFrame
 * convert SMALL-LABS output (*_fits.mat, *_guesses.mat) to .csv
@@ -15,17 +15,18 @@ Reading, writing, and converting between different file types.
 
 ### biteen_pandas.py:
 Working with tabular data stored in pandas DataFrames.
+* calculate individual step data from localizations
 * filter localization data by number of localizations in each track
 * calculate median step size for each track
 
 ### biteen_plots.py
 Plotting single-molecule data.
-* Plotting trajectories overlayed on image data, e.g. phase contrast, segmented regions of interest
+* Plot localizations overlayed on image data, e.g. phase contrast
+* Plot trajectories overlayed on image data, e.g. phase contrast
 
 ## Future
-* Spot-On
 * dpsp
-* drift correction
+* drift correction with RCC
 * registration
 * using napari
 * MSD

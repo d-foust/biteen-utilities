@@ -8,6 +8,191 @@ import numpy as np
 import pandas as pd
 from skimage.measure import find_contours, regionprops
 
+def add_scalebar(ax, scalebar_props):
+    """
+    Add a scalebar to image displayed on ax.
+
+    Parameters
+    ----------
+    ax : matplotlib.Axes
+    scalebar_props : dict
+        Contains instructions for drawing scalebar. 
+        Required keys: 'loc', 'buffer', 'height', 'length'
+            'loc' : must be 'upper_left', 'lower_left', 'upper_rigth', 'lower_right'
+            'buffer' : distance in pixels from nearest corner of scalebar to edge of image
+            'height' : in pixels
+            'width' : in pixels
+            'edgecolor' : 
+            'facecolor' : 
+
+    """
+    
+    xmin, xmax = ax.get_xlim()
+    ymax, ymin = ax.get_ylim()
+    
+    if scalebar_props['loc'] == 'upper_left':
+        x = xmin + scalebar_props['buffer']
+        y = ymin + scalebar_props['buffer']
+    elif scalebar_props['loc'] == 'lower_left':
+        x = xmin + scalebar_props['buffer']
+        y = ymax - scalebar_props['buffer'] - scalebar_props['height']
+    elif scalebar_props['loc'] == 'upper_right':
+        x = xmax - scalebar_props['buffer'] - scalebar_props['length']
+        y = ymin + scalebar_props['buffer']
+    elif scalebar_props['loc'] == 'lower_right':
+        x = xmax - scalebar_props['buffer'] - scalebar_props['length']
+        y = ymax - scalebar_props['buffer'] - scalebar_props['height']
+    
+    ax.add_patch(Rectangle((x, y), scalebar_props['length'], scalebar_props['height'],
+                 edgecolor=scalebar_props['edgecolor'],
+                 facecolor=scalebar_props['facecolor']))
+    
+def crop_to_labels(ax, labels, crop_buffer=5):
+    """
+    Set limits of ax so that only bounding box of labels is shown with crop_buffer number of
+    pixels added to border.
+
+    Parameters
+    ----------
+    ax : matplotlib axis handle
+    labels : np.array, dtype=int
+    crop_buffer : int
+        Extra pixels to leave around bounding box.
+
+    Returns
+    -------
+    None
+    """
+    nrows_init, ncols_init = labels.shape
+
+    labels_bool = (labels > 0).astype('int')
+    rowmin, colmin, rowmax, colmax = regionprops(labels_bool)[0]['bbox']
+
+    xmin = np.max([-0.5, colmin-crop_buffer-0.5])
+    xmax = np.min([colmax+crop_buffer+0.5, ncols_init-0.5])
+    ymin = np.max([-0.5, rowmin-crop_buffer-0.5])
+    ymax = np.min([rowmax+crop_buffer+0.5, nrows_init-0.5])
+    
+    ax.set_xlim(left=xmin, right=xmax)
+    ax.set_ylim(bottom=ymax, top=ymin)
+
+def figs_to_pdf(figures, save_name):
+    """
+    Save series of figures to pdf where each figure is on a single page.
+
+    Parameters
+    ----------
+    figures : List[matplotlib figure objects]
+    savename : str, Path
+
+    Returns
+    -------
+    None
+    """
+    image_pdf = PdfPages(save_name)
+    for fig in figures:
+        image_pdf.savefig(fig)
+    image_pdf.close()
+
+def labels_to_contours(labels, level=0.5):
+    """
+
+    Parameters
+    ----------
+    labels : np.array(dtype=int)
+    level : float, (0, 1)
+
+    Returns
+    -------
+    contours : list[np.array(shape=(N,2))]
+        Length of contours matches number of rois
+        Columns of each array contain rows and columns, respectively.
+    """
+    n_labels = labels.max()
+    contours = []
+    for l in range(1, n_labels+1):
+        label = labels == l
+        contour = find_contours(label, level=level)
+        contours.append(contour)
+        
+    return contours
+
+def plot_locs_gaussian():
+    """
+    Plots localizations with each represented by a Gaussian distribtuion.
+
+    Parameters
+    ----------
+    
+
+    Returns
+    -------
+    fig
+    ax
+    """
+    pass
+
+def plot_locs_scatter(locs_df,
+                        coord_cols=('x', 'y'),
+                        color_col = None,
+                        scale = 1,
+                        labels = None,
+                        image = None,
+                        crop = False,
+                        figure_props = {},
+                        marker_props = {},
+                        scalebar_props = None):
+    """
+    
+    
+    Parameters
+    ----------
+    marker_props : dict
+        kwargs to matplotlib.pyplot.scatter
+
+    Returns
+    -------
+
+    """
+    xcol, ycol = coord_cols
+
+    if color_col is None: colors = None
+    else: colors = locs_df[color_col]
+
+    if 'c' not in marker_props:
+        marker_props['c'] = colors
+
+    if labels is not None:
+        contours = labels_to_contours(labels)
+    else:
+        contours = []
+
+    if image is None and labels is None:
+        colmax = int(np.max(locs_df[xcol]*scale)) + 1
+        rowmax = int(np.max(locs_df[ycol]*scale)) + 1
+        image = np.zeros([rowmax, colmax])
+    elif image is None:
+        image = np.zeros(labels.shape)
+
+    fig, ax = plt.subplots(1, 1, **figure_props)
+        
+    ax.imshow(image, cmap='binary_r')
+    
+    for contour in contours:
+        ax.plot(contour[0][:,1], contour[0][:,0], lw=1, alpha=0.5, color='xkcd:gray')
+
+    ax.scatter(locs_df[xcol]*scale, locs_df[ycol]*scale, **marker_props)
+            
+    if crop == True:
+        crop_to_labels(ax, labels)
+
+    if scalebar_props is not None:
+        add_scalebar(ax, scalebar_props)
+
+    ax.axis('off')
+
+    return fig, ax
+
 def plot_tracks(locs_df,
                 track_data = None,
                 coord_cols=('x', 'y'),
@@ -144,167 +329,3 @@ def plot_tracks(locs_df,
             add_scalebar(ax, scalebar_props)
 
     return fig, ax
-
-def plot_locs_scatter(locs_df,
-                        coord_cols=('x', 'y'),
-                        color_col = None,
-                        scale = 1,
-                        labels = None,
-                        image = None,
-                        crop = False,
-                        figure_props = {},
-                        marker_props = {},
-                        scalebar_props = None):
-    """
-    
-    
-    Parameters
-    ----------
-    marker_props : dict
-        kwargs to matplotlib.pyplot.scatter
-
-    Returns
-    -------
-
-    """
-    xcol, ycol = coord_cols
-
-    if color_col is None: colors = None
-    else: colors = locs_df[color_col]
-
-    if 'c' not in marker_props:
-        marker_props['c'] = colors
-
-    if labels is not None:
-        contours = labels_to_contours(labels)
-    else:
-        contours = []
-
-    if image is None and labels is None:
-        colmax = int(np.max(locs_df[xcol]*scale)) + 1
-        rowmax = int(np.max(locs_df[ycol]*scale)) + 1
-        image = np.zeros([rowmax, colmax])
-    elif image is None:
-        image = np.zeros(labels.shape)
-
-    fig, ax = plt.subplots(1, 1, **figure_props)
-        
-    ax.imshow(image, cmap='binary_r')
-    
-    for contour in contours:
-        ax.plot(contour[0][:,1], contour[0][:,0], lw=1, alpha=0.5, color='xkcd:gray')
-
-    ax.scatter(locs_df[xcol]*scale, locs_df[ycol]*scale, **marker_props)
-            
-    if crop == True:
-        crop_to_labels(ax, labels)
-
-    if scalebar_props is not None:
-        add_scalebar(ax, scalebar_props)
-
-    ax.axis('off')
-
-    return fig, ax
-
-def plot_locs_gaussian():
-    """
-    Plots localizations with each represented by a Gaussian distribtuion.
-
-    Parameters
-    ----------
-    
-
-    Returns
-    -------
-    fig
-    ax
-    """
-    pass
-
-def labels_to_contours(labels, level=0.5):
-    """
-
-    Parameters
-    ----------
-    labels : np.array(dtype=int)
-    level : float, (0, 1)
-
-    Returns
-    -------
-    contours : list[np.array(shape=(N,2))]
-        Length of contours matches number of rois
-        Columns of each array contain rows and columns, respectively.
-    """
-    n_labels = labels.max()
-    contours = []
-    for l in range(1, n_labels+1):
-        label = labels == l
-        contour = find_contours(label, level=level)
-        contours.append(contour)
-        
-    return contours
-
-def add_scalebar(ax, scalebar_props):
-    
-    xmin, xmax = ax.get_xlim()
-    ymax, ymin = ax.get_ylim()
-    
-    if scalebar_props['loc'] == 'upper_left':
-        x = xmin + scalebar_props['buffer']
-        y = ymin + scalebar_props['buffer']
-    elif scalebar_props['loc'] == 'lower_left':
-        x = xmin + scalebar_props['buffer']
-        y = ymax - scalebar_props['buffer'] - scalebar_props['height']
-    elif scalebar_props['loc'] == 'upper_right':
-        x = xmax - scalebar_props['buffer'] - scalebar_props['length']
-        y = ymin + scalebar_props['buffer']
-    elif scalebar_props['loc'] == 'lower_right':
-        x = xmax - scalebar_props['buffer'] - scalebar_props['length']
-        y = ymax - scalebar_props['buffer'] - scalebar_props['height']
-    
-    ax.add_patch(Rectangle((x, y), scalebar_props['length'], scalebar_props['height'],
-                 edgecolor=scalebar_props['edgecolor'],
-                 facecolor=scalebar_props['facecolor']))
-    
-def crop_to_labels(ax, labels, crop_buffer=5):
-    """
-    Set limits of ax so that only bounding box of cell_labels is shown with crop_buffer number of
-    pixels added to border.
-
-    Parameters
-    ----------
-    ax : matplotlib axis handle
-    labels : np.array, dtype=int
-    crop_buffer : int
-        Extra pixels to leave around bounding box.
-
-    Returns
-    -------
-    None
-    """
-    labels_bool = (labels > 0).astype('int')
-    rowmin, colmin, rowmax, colmax = regionprops(labels_bool)[0]['bbox']
-    
-    xmin, xmax = colmin-crop_buffer-0.5, colmax+crop_buffer+0.5
-    ymin, ymax = rowmin-crop_buffer-0.5, rowmax+crop_buffer+0.5
-    
-    ax.set_xlim(left=xmin, right=xmax)
-    ax.set_ylim(bottom=ymax, top=ymin)
-
-def figs_to_pdf(figures, save_name):
-    """
-    Save series of figures to pdf where each figure is on a single page.
-
-    Parameters
-    ----------
-    figures : List[matplotlib figure objects]
-    savename : str, Path
-
-    Returns
-    -------
-    None
-    """
-    image_pdf = PdfPages(save_name)
-    for fig in figures:
-        image_pdf.savefig(fig)
-    image_pdf.close()

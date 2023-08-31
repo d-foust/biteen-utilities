@@ -28,7 +28,7 @@ def filter_by_nlocs(locs_df, min_locs=2, max_locs=np.inf, track_col='track_id'):
 
 def locs_to_steps(locs_df, frame_col='frame', coord_cols=('x', 'y'), track_col='track_id'):
     """
-    From locs_df calculate data about individual steps.
+    From locs_df calculate data for individual steps.
 
     Parameters
     ----------
@@ -57,7 +57,7 @@ def locs_to_steps(locs_df, frame_col='frame', coord_cols=('x', 'y'), track_col='
 
     track_filt = track_id[:-1] == track_id[1:] # to verify 
 
-    steps_df = pd.DataFrame(data={'frame0': frames[:-1][track_filt], 'frame1': frames[:-1][track_filt],
+    steps_df = pd.DataFrame(data={'frame0': frames[:-1][track_filt], 'frame1': frames[1:][track_filt],
                                   'x0': x[:-1][track_filt], 'x1': x[1:][track_filt],
                                   'y0': y[:-1][track_filt], 'y1': y[1:][track_filt]})
 
