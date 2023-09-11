@@ -117,17 +117,20 @@ def df_to_sl(df, col_mapper = None):
     fits_dict = {c: data[c].values for c in data.columns} # may need to play with axes ordering
     data_sl['fits'] = fits_dict
 
-    if set(('frame', 'row', 'col', 'track_id', 'roinum')).issubset(data.columns):
+    # to have 'frame', 'row', 'col', 'track_id' columns to generate tracks
+    if set(('frame', 'row', 'col', 'track_id')).issubset(data.columns):
         tracks = np.zeros([len(data), 6])
         tracks[:,0] = data['frame'].values
         tracks[:,1] = data['row'].values
         tracks[:,2] = data['col'].values
         tracks[:,3] = data['track_id'].values
-        tracks[:,4] = data['roinum'].values
-        if 'molid' in data.columns:
-            tracks[:,5] = data['molid'].values
-        else:
-            tracks[:,5] = data.index.values
+
+        if 'roinum' in data.columns: tracks[:,4] = data['roinum'].values
+        else: tracks[:,4] = np.ones(len(data))
+
+        if 'molid' in data.columns: tracks[:,5] = data['molid'].values
+        else: tracks[:,5] = data.index.values
+
         data_sl['tracks'] = tracks
 
     return data_sl
@@ -282,7 +285,8 @@ def save_sl_fits(data_sl, file_sl):
     Parameters
     ----------
     data_sl : dict
-    file_sl : name of file where data_sl is to be save. Should end with '.mat'.
+    file_sl : str
+        name of file where data_sl is to be save. Should end with '.mat'.
 
     Returns
     -------
