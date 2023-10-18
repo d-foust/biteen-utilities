@@ -4,48 +4,49 @@
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
+import matplotlib_scalebar.scalebar as sb
 import numpy as np
 import pandas as pd
 from skimage.measure import find_contours, regionprops
 
-def add_scalebar(ax, scalebar_props):
-    """
-    Add a scalebar to image displayed on ax.
+# def add_scalebar(ax, scalebar_props):
+#     """
+#     Add a scalebar to image displayed on ax.
 
-    Parameters
-    ----------
-    ax : matplotlib.Axes
-    scalebar_props : dict
-        Contains instructions for drawing scalebar. 
-        Required keys: 'loc', 'buffer', 'height', 'length'
-            'loc' : must be 'upper_left', 'lower_left', 'upper_rigth', 'lower_right'
-            'buffer' : distance in pixels from nearest corner of scalebar to edge of image
-            'height' : in pixels
-            'width' : in pixels
-            'edgecolor' : 
-            'facecolor' : 
+#     Parameters
+#     ----------
+#     ax : matplotlib.Axes
+#     scalebar_props : dict
+#         Contains instructions for drawing scalebar. 
+#         Required keys: 'loc', 'buffer', 'height', 'length'
+#             'loc' : must be 'upper_left', 'lower_left', 'upper_rigth', 'lower_right'
+#             'buffer' : distance in pixels from nearest corner of scalebar to edge of image
+#             'height' : in pixels
+#             'width' : in pixels
+#             'edgecolor' : 
+#             'facecolor' : 
 
-    """
+#     """
     
-    xmin, xmax = ax.get_xlim()
-    ymax, ymin = ax.get_ylim()
+#     xmin, xmax = ax.get_xlim()
+#     ymax, ymin = ax.get_ylim()
     
-    if scalebar_props['loc'] == 'upper_left':
-        x = xmin + scalebar_props['buffer']
-        y = ymin + scalebar_props['buffer']
-    elif scalebar_props['loc'] == 'lower_left':
-        x = xmin + scalebar_props['buffer']
-        y = ymax - scalebar_props['buffer'] - scalebar_props['height']
-    elif scalebar_props['loc'] == 'upper_right':
-        x = xmax - scalebar_props['buffer'] - scalebar_props['length']
-        y = ymin + scalebar_props['buffer']
-    elif scalebar_props['loc'] == 'lower_right':
-        x = xmax - scalebar_props['buffer'] - scalebar_props['length']
-        y = ymax - scalebar_props['buffer'] - scalebar_props['height']
+#     if scalebar_props['loc'] == 'upper_left':
+#         x = xmin + scalebar_props['buffer']
+#         y = ymin + scalebar_props['buffer']
+#     elif scalebar_props['loc'] == 'lower_left':
+#         x = xmin + scalebar_props['buffer']
+#         y = ymax - scalebar_props['buffer'] - scalebar_props['height']
+#     elif scalebar_props['loc'] == 'upper_right':
+#         x = xmax - scalebar_props['buffer'] - scalebar_props['length']
+#         y = ymin + scalebar_props['buffer']
+#     elif scalebar_props['loc'] == 'lower_right':
+#         x = xmax - scalebar_props['buffer'] - scalebar_props['length']
+#         y = ymax - scalebar_props['buffer'] - scalebar_props['height']
     
-    ax.add_patch(Rectangle((x, y), scalebar_props['length'], scalebar_props['height'],
-                 edgecolor=scalebar_props['edgecolor'],
-                 facecolor=scalebar_props['facecolor']))
+#     ax.add_patch(Rectangle((x, y), scalebar_props['length'], scalebar_props['height'],
+#                  edgecolor=scalebar_props['edgecolor'],
+#                  facecolor=scalebar_props['facecolor']))
     
 def crop_to_labels(ax, labels, crop_buffer=5):
     """
@@ -134,7 +135,6 @@ def plot_locs_gaussian():
 
 def plot_locs_scatter(locs_df,
                         coord_cols=('x', 'y'),
-                        color_col = None,
                         scale = 1,
                         labels = None,
                         image = None,
@@ -151,8 +151,6 @@ def plot_locs_scatter(locs_df,
     coord_cols : 2-tuple of strings, default ('x', 'y')
         Specify columns of locs_df containing coordinates.
         Set to ('col', 'row') for data originating from SMALL-LABS.
-    color_col : string
-        Specify column of locs_df to determine marker color.
     scale : float
         Factor to convert units of coord_cols to pixels
     labels : np.ndarray
@@ -168,20 +166,16 @@ def plot_locs_scatter(locs_df,
         Inputs to plt.subplots.
     marker_props : dict
         kwargs to matplotlib.pyplot.scatter
+        https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html
     scalebar_props : dict
         Inputs to add_scalebar. If None provided (default), no scalebar is drawn.
+        
 
     Returns
     -------
     fig, ax
     """
     xcol, ycol = coord_cols
-
-    if color_col is None: colors = None
-    else: colors = locs_df[color_col]
-
-    if 'c' not in marker_props:
-        marker_props['c'] = colors
 
     if labels is not None:
         contours = labels_to_contours(labels)
@@ -206,9 +200,14 @@ def plot_locs_scatter(locs_df,
             
     if crop == True:
         crop_to_labels(ax, labels)
+    else:
+        ax.set_xlim(left=-0.5, right=image.shape[1]-0.5)
+        ax.set_ylim(bottom=image.shape[0]-0.5, top=-0.5)
 
     if scalebar_props is not None:
-        add_scalebar(ax, scalebar_props)
+        # add_scalebar(ax, scalebar_props)
+        scalebar = sb.ScaleBar(**scalebar_props)
+        ax.add_artist(scalebar)
 
     ax.axis('off')
 
@@ -317,8 +316,10 @@ def plot_tracks(locs_df,
             if crop == True:
                 crop_to_labels(ax[i_ax], labels)
 
-            if scalebar_props is not None:
-                add_scalebar(ax[i_ax], scalebar_props)
+                if scalebar_props is not None:
+                    # add_scalebar(ax, scalebar_props)
+                    scalebar = sb.ScaleBar(**scalebar_props)
+                    ax.add_artist(scalebar)
 
     elif separate == False:
         fig, ax = plt.subplots(1, 1, **figure_props)
@@ -346,7 +347,11 @@ def plot_tracks(locs_df,
         if crop == True:
             crop_to_labels(ax, labels)
 
+        # if scalebar_props is not None:
+        #     add_scalebar(ax, scalebar_props)
         if scalebar_props is not None:
-            add_scalebar(ax, scalebar_props)
+            # add_scalebar(ax, scalebar_props)
+            scalebar = sb.ScaleBar(**scalebar_props)
+            ax.add_artist(scalebar)
 
     return fig, ax
