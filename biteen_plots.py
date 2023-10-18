@@ -143,16 +143,37 @@ def plot_locs_scatter(locs_df,
                         marker_props = {},
                         scalebar_props = None):
     """
-    
+    Plot single-molecule localization data as a scatter plot.
     
     Parameters
     ----------
+    locs_df : pd.DataFrame
+    coord_cols : 2-tuple of strings, default ('x', 'y')
+        Specify columns of locs_df containing coordinates.
+        Set to ('col', 'row') for data originating from SMALL-LABS.
+    color_col : string
+        Specify column of locs_df to determine marker color.
+    scale : float
+        Factor to convert units of coord_cols to pixels
+    labels : np.ndarray
+        2d integer array labeling regions of interest.
+        Typically the output of segmentation, e.g. cellpose.
+    image : np.ndarray
+        2d array to overlay localization scatter on.
+        Typically, some kind reference image, e.g. phase contrast.
+        If None provided, plot on black background by default.
+    crop : bool, default False
+        If True, will crop to only display area where labels > 0.
+    figure_props : dict
+        Inputs to plt.subplots.
     marker_props : dict
         kwargs to matplotlib.pyplot.scatter
+    scalebar_props : dict
+        Inputs to add_scalebar. If None provided (default), no scalebar is drawn.
 
     Returns
     -------
-
+    fig, ax
     """
     xcol, ycol = coord_cols
 
