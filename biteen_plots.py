@@ -1,52 +1,12 @@
 """
-
 """
+import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import matplotlib_scalebar.scalebar as sb
 import numpy as np
 import pandas as pd
 from skimage.measure import find_contours, regionprops
-
-# def add_scalebar(ax, scalebar_props):
-#     """
-#     Add a scalebar to image displayed on ax.
-
-#     Parameters
-#     ----------
-#     ax : matplotlib.Axes
-#     scalebar_props : dict
-#         Contains instructions for drawing scalebar. 
-#         Required keys: 'loc', 'buffer', 'height', 'length'
-#             'loc' : must be 'upper_left', 'lower_left', 'upper_rigth', 'lower_right'
-#             'buffer' : distance in pixels from nearest corner of scalebar to edge of image
-#             'height' : in pixels
-#             'width' : in pixels
-#             'edgecolor' : 
-#             'facecolor' : 
-
-#     """
-    
-#     xmin, xmax = ax.get_xlim()
-#     ymax, ymin = ax.get_ylim()
-    
-#     if scalebar_props['loc'] == 'upper_left':
-#         x = xmin + scalebar_props['buffer']
-#         y = ymin + scalebar_props['buffer']
-#     elif scalebar_props['loc'] == 'lower_left':
-#         x = xmin + scalebar_props['buffer']
-#         y = ymax - scalebar_props['buffer'] - scalebar_props['height']
-#     elif scalebar_props['loc'] == 'upper_right':
-#         x = xmax - scalebar_props['buffer'] - scalebar_props['length']
-#         y = ymin + scalebar_props['buffer']
-#     elif scalebar_props['loc'] == 'lower_right':
-#         x = xmax - scalebar_props['buffer'] - scalebar_props['length']
-#         y = ymax - scalebar_props['buffer'] - scalebar_props['height']
-    
-#     ax.add_patch(Rectangle((x, y), scalebar_props['length'], scalebar_props['height'],
-#                  edgecolor=scalebar_props['edgecolor'],
-#                  facecolor=scalebar_props['facecolor']))
     
 def crop_to_labels(ax, labels, crop_buffer=5):
     """
@@ -133,15 +93,17 @@ def plot_locs_gaussian():
     """
     pass
 
-def plot_locs_scatter(locs_df,
-                        coord_cols=('x', 'y'),
-                        scale = 1,
-                        labels = None,
-                        image = None,
-                        crop = False,
-                        figure_props = {},
-                        marker_props = {},
-                        scalebar_props = None):
+def plot_locs_scatter(
+        locs_df,
+        coord_cols=('x', 'y'),
+        scale = 1,
+        labels = None,
+        image = None,
+        crop = False,
+        figure_props = {},
+        marker_props = {},
+        scalebar_props = None
+        ):
     """
     Plot single-molecule localization data as a scatter plot.
     
@@ -213,22 +175,122 @@ def plot_locs_scatter(locs_df,
 
     return fig, ax
 
-def plot_tracks(locs_df,
-                track_data = None,
-                coord_cols=('x', 'y'),
-                track_col = 'track_id',
-                track_data_bins = np.array([[-np.inf, np.inf]]),
-                track_data_colors = None,
-                order = 'forward',
-                scale = 1,
-                labels = None,
-                image = None,
-                subsample = None,
-                line_props = {},
-                separate = False,
-                crop = False,
-                figure_props = {},
-                scalebar_props = None):
+default_scalebar_props = {
+    'dx': 0.049,
+    'units': 'um',
+    'fixed_value': 4,
+    'scale_loc': 'none',
+    'location': 'lower left',
+    'frameon': False
+}
+
+transparent_rgba = mpl.colors.to_rgba('xkcd:white', alpha=0)
+black = mpl.colors.to_rgba('xkcd:black', alpha=1)
+hotmagenta_tr = mpl.colors.to_rgba('xkcd:hot magenta', alpha=0)
+hotmagenta_op = mpl.colors.to_rgba('xkcd:hot magenta', alpha=1)
+
+transparent2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('transparent2hotmagenta',
+                                                                   [hotmagenta_tr, hotmagenta_op],
+                                                                   512)
+
+black2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('black2hotmagenta',
+                                                                   [black, hotmagenta_op],
+                                                                   512)
+
+def plot_overlay(
+        image_bgd: np.ndarray,
+        image_fgd: np.ndarray,
+        vmin_bgd: float = None,
+        vmax_bgd: float = None,
+        vmin_fgd: float = None,
+        vmax_fgd: float = None,
+        cmap_bgd: str = "binary_r",
+        cmap_fgd_solo: mpl.colors.LinearSegmentedColormap = black2hotmagenta,
+        cmap_fgd_overlay: mpl.colors.LinearSegmentedColormap = transparent2hotmagenta,
+        scalebar_props: dict = default_scalebar_props
+        ):
+    """
+    Creates figure with three axes for displaying two images and an overlay:
+    1) Background image, e.g. phase contrast.
+    2) Foreground image, e.g. bulk fluorescence.
+    3) Overlay of foreground image on background image.
+
+    Parameters
+    ----------
+    image_bgd : np.ndarray
+        2D array for background image.
+    image_fgd : np.ndarray
+        2D array for foreground image.
+    vmin_bgd : float
+        Lower limit on background image - for setting contrast. Default is image_bgd.min().
+    vmax_bgd : float
+        Upper limit on background image - for setting contrast. Default is image_bgd.max().
+    vmin_fgd : float
+        Lower limit on foreground image - for setting contrast. Default is image_fgd.min().
+    vmax_fgd : float
+        Upper limit on foreground image - for setting contrast. Default is image_fgd.max().
+    cmap_bgd : str, default "binary_r"
+        Colormap for background image.
+    cmap_fgd_solo : mpl.colors.LinearSegmentedColormap
+        Colormap for foreground image in middle axes. Default is hot magenta against black.
+    cmap_fgd_overlay : mpl.colors.LinearSegmentedColormap
+        Colormap for foreground image in overlay. Default is hot magenta against transparent.
+    scalebar_props : dict
+
+    Returns
+    -------
+    fig : mpl.figure.Figure
+    ax : mpl.axes.Axes
+    """
+    scalebar = sb.ScaleBar(**scalebar_props)
+
+    fig, ax = plt.subplots(1, 3, figsize=(12,6))
+
+    ax[0].imshow(image_bgd,
+                 cmap=cmap_bgd,
+                 vmin=vmin_bgd,
+                 vmax=vmax_bgd)
+    ax[0].add_artist(scalebar)
+    ax[0].axis('off')
+
+    ax[1].imshow(image_fgd,
+                cmap=cmap_fgd_solo,
+                vmin=vmin_fgd,
+                vmax=vmax_fgd)
+    ax[1].axis('off')
+
+    ax[2].imshow(image_bgd,
+                 cmap=cmap_bgd,
+                 vmin=vmin_bgd,
+                 vmax=vmax_bgd)
+    ax[2].imshow(image_fgd,
+                cmap=cmap_fgd_overlay,
+                vmin=vmin_fgd,
+                vmax=vmax_fgd)
+    ax[2].axis('off')
+
+    plt.tight_layout()
+
+    return fig, ax
+
+def plot_tracks(
+        locs_df,
+        track_data = None,
+        coord_cols=('x', 'y'),
+        track_col = 'track_id',
+        track_data_bins = np.array([[-np.inf, np.inf]]),
+        track_data_colors = None,
+        order = 'forward',
+        scale = 1,
+        labels = None,
+        image = None,
+        subsample = None,
+        line_props = {},
+        separate = False,
+        crop = False,
+        figure_props = {},
+        scalebar_props = None
+        ):
     """
     Plot single-molecule tracks.
 
@@ -347,10 +409,7 @@ def plot_tracks(locs_df,
         if crop == True:
             crop_to_labels(ax, labels)
 
-        # if scalebar_props is not None:
-        #     add_scalebar(ax, scalebar_props)
         if scalebar_props is not None:
-            # add_scalebar(ax, scalebar_props)
             scalebar = sb.ScaleBar(**scalebar_props)
             ax.add_artist(scalebar)
 
