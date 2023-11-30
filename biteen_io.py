@@ -326,6 +326,24 @@ def slfile_to_csv(file_sl, file_csv = None, ext = '.csv', folder_dest = None):
 
     df.to_csv(file_csv)
 
+def slfile_to_df(file_sl: str):
+    """
+    Read SMALL-LABS file and convert to DataFrame.
+
+    Parameters
+    ----------
+    file_sl : str
+
+    Returns
+    -------
+    df : pd.DataFrame
+    """
+    obj_sl = h5py.File(file_sl)
+    df = sl_to_df(obj_sl)
+
+    return df
+
+
 def slfile_to_csv_batch(folder_sl, pattern_sl = '*_fits.mat', ext = '.csv', folder_dest = None):
     """
     Converts SMALL-LABS files to csv.
@@ -362,7 +380,19 @@ def sl_to_df(sl_object):
     pd.DataFrame
     """
     if 'fits' in sl_object.keys():
-        df = pd.DataFrame(data={key: sl_object['fits'][key][0,:] for key in sl_object['fits'].keys()})
+        df = pd.DataFrame(
+            data={
+                key: sl_object['fits'][key][0,:] for key in sl_object['fits'].keys() if key not in ('rowCI', 'colCI')
+                }
+            )
+        if 'rowCI' in sl_object['fits'].keys():
+            rowCI = np.array([[re, im] for (re, im) in sl_object['fits']['rowCI'][0]])
+            df['rowCI_re'] = rowCI[:,0]
+            df['rowCI_im'] = rowCI[:,1]
+        if 'colCI' in sl_object['fits'].keys():
+            colCI = np.array([[re, im] for (re, im) in sl_object['fits']['colCI'][0]])
+            df['colCI_re'] = colCI[:,0]
+            df['colCI_im'] = colCI[:,1]
     elif 'guesses' in sl_object.keys():
         df = pd.DataFrame(data={'frame': sl_object['guesses'][0,:],
                                 'row': sl_object['guesses'][1,:],
@@ -377,9 +407,9 @@ def sl_to_df(sl_object):
         df['tracked'] = np.isin(df['molid'], sl_object['tracks'][5,:])
         df['track_id'] = np.nan
         df.loc[df['tracked']==True, 'track_id'] = sl_object['tracks'][3,:]
-        track_id_max = sl_object['tracks'][3,:].max()
-        n_nottracked = (df['tracked']==False).sum()
-        df.loc[df['tracked']==False, 'track_id'] = np.arange(track_id_max+1, track_id_max+n_nottracked+1)
+
+        if 'roinum' in df.columns:
+            df['track_id_unique'] = df['track_id'] * df['roinum']
 
     return df
 
