@@ -278,6 +278,7 @@ def plot_tracks(
         track_data = None,
         coord_cols=('x', 'y'),
         track_col = 'track_id',
+        color_col = None,
         track_data_bins = np.array([[-np.inf, np.inf]]),
         track_data_colors = None,
         order = 'forward',
@@ -329,8 +330,8 @@ def plot_tracks(
     ycol = coord_cols[1]
 
     if track_data is None:
-        track_ids = np.unique(locs_df['track_id'])
-        track_data = pd.DataFrame(data={'track_id': np.unique(track_ids)})
+        track_ids = np.unique(locs_df[track_col])
+        track_data = pd.DataFrame(data={track_col: np.unique(track_ids)})
 
     if subsample is not None:
         idx_sub = np.random.choice(track_data.index, size=subsample, replace=False)
@@ -369,8 +370,8 @@ def plot_tracks(
                             color='xkcd:gray') # future: contour props
             
             filt = (track_data[track_col] > l) & (track_data[track_col] <= h)
-            for ti in track_data['track_id'][filt]:
-                loc_filt = locs_df['track_id'] == ti
+            for ti in track_data[track_col][filt]:
+                loc_filt = locs_df[track_col] == ti
                 x = locs_df['x'][loc_filt]
                 y = locs_df['y'][loc_filt]
                 ax[i_ax].plot(x*scale, y*scale, color=track_data_colors[i_ax%n_colors], **line_props)
@@ -399,9 +400,9 @@ def plot_tracks(
 
         for i in i_bin:
             l, h = track_data_bins[i]
-            filt = (track_data[track_col] > l) & (track_data[track_col] <= h)
-            for ti in track_data['track_id'][filt]:
-                loc_filt = locs_df['track_id'] == ti
+            filt = (track_data[color_col] > l) & (track_data[color_col] <= h)
+            for ti in track_data[track_col][filt]:
+                loc_filt = locs_df[track_col] == ti
                 x = locs_df['x'][loc_filt]
                 y = locs_df['y'][loc_filt]
                 ax.plot(x*scale, y*scale, color=track_data_colors[i%n_colors], **line_props)
