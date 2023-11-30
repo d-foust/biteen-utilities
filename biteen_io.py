@@ -409,7 +409,8 @@ def sl_to_df(sl_object):
         df.loc[df['tracked']==True, 'track_id'] = sl_object['tracks'][3,:]
 
         if 'roinum' in df.columns:
-            df['track_id_unique'] = df['track_id'] * df['roinum']
+            track_id_max = df['track_id'].max()
+            df['track_id_unique'] = df['track_id'] + (df['roinum'] - 1)*track_id_max
 
     return df
 

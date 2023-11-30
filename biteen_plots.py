@@ -352,7 +352,7 @@ def plot_tracks(
     n_bins = track_data_bins.shape[0]
 
     if track_data_colors is None:
-        track_data_colors = ['xkcd:hot pink']*n_bins
+        track_data_colors = ['xkcd:hot pink'] * n_bins
     n_colors = len(track_data_colors)
 
     if separate == True:
@@ -372,8 +372,8 @@ def plot_tracks(
             filt = (track_data[track_col] > l) & (track_data[track_col] <= h)
             for ti in track_data[track_col][filt]:
                 loc_filt = locs_df[track_col] == ti
-                x = locs_df['x'][loc_filt]
-                y = locs_df['y'][loc_filt]
+                x = locs_df[xcol][loc_filt]
+                y = locs_df[ycol][loc_filt]
                 ax[i_ax].plot(x*scale, y*scale, color=track_data_colors[i_ax%n_colors], **line_props)
 
             if crop == True:
@@ -403,8 +403,8 @@ def plot_tracks(
             filt = (track_data[color_col] > l) & (track_data[color_col] <= h)
             for ti in track_data[track_col][filt]:
                 loc_filt = locs_df[track_col] == ti
-                x = locs_df['x'][loc_filt]
-                y = locs_df['y'][loc_filt]
+                x = locs_df[xcol][loc_filt]
+                y = locs_df[ycol][loc_filt]
                 ax.plot(x*scale, y*scale, color=track_data_colors[i%n_colors], **line_props)
                 
         if crop == True:
