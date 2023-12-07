@@ -386,13 +386,19 @@ def sl_to_df(sl_object):
                 }
             )
         if 'rowCI' in sl_object['fits'].keys():
-            rowCI = np.array([[re, im] for (re, im) in sl_object['fits']['rowCI'][0]])
-            df['rowCI_re'] = rowCI[:,0]
-            df['rowCI_im'] = rowCI[:,1]
+            if len(sl_object['fits']['rowCI'].dtype) == 2:
+                rowCI = np.array([[re, im] for (re, im) in sl_object['fits']['rowCI'][0]])
+                df['rowCI_re'] = rowCI[:,0]
+                df['rowCI_im'] = rowCI[:,1]
+            elif len(sl_object['fits']['rowCI'].dtype) == 1:
+                df['rowCI'] = sl_object['fits']['rowCI'][0,:]
         if 'colCI' in sl_object['fits'].keys():
-            colCI = np.array([[re, im] for (re, im) in sl_object['fits']['colCI'][0]])
-            df['colCI_re'] = colCI[:,0]
-            df['colCI_im'] = colCI[:,1]
+            if len(sl_object['fits']['colCI'].dtype) == 2:
+                colCI = np.array([[re, im] for (re, im) in sl_object['fits']['colCI'][0]])
+                df['colCI_re'] = colCI[:,0]
+                df['colCI_im'] = colCI[:,1]
+            elif len(sl_object['fits']['colCI'].dtype) == 1:
+                df['colCI'] = sl_object['fits']['colCI'][0,:]
     elif 'guesses' in sl_object.keys():
         df = pd.DataFrame(data={'frame': sl_object['guesses'][0,:],
                                 'row': sl_object['guesses'][1,:],
@@ -400,17 +406,29 @@ def sl_to_df(sl_object):
         if 'roinum' in sl_object.keys():
             df['roinum'] = sl_object['roinum'][0,:]
 
+    df.loc[:,'frame'] -= 1
+    df.loc[:,'row'] -= 1
+    df.loc[:,'col'] -= 1
+
     if 'trk_filt' in sl_object.keys():
         df['trk_filt'] = sl_object['trk_filt'][0,:]
 
     if 'tracks' in sl_object.keys():
-        df['tracked'] = np.isin(df['molid'], sl_object['tracks'][5,:])
-        df['track_id'] = np.nan
-        df.loc[df['tracked']==True, 'track_id'] = sl_object['tracks'][3,:]
+        # tracks_df = pd.DataFrame(data=sl_object['tracks'][:].T,
+        #                          columns=('frame', 'row', 'col', 'track_id', 'roinum', 'molid'))
+        tracks_df = pd.DataFrame(data={'track_id': sl_object['tracks'][3,:], 'molid': sl_object['tracks'][5,:]})
+        df = pd.merge(df, tracks_df, how='left')
+        # df = df.merge(tracks_df, how='left')
+        df['tracked'] = ~np.isnan(df['track_id'])
+        
+        # df['tracked'] = np.isin(df['molid'], sl_object['tracks'][5,:])
+        # df['track_id'] = np.nan
+        # df.loc[df['tracked']==True, 'track_id'] = sl_object['tracks'][3,:] # wrong
 
-        if 'roinum' in df.columns:
-            track_id_max = df['track_id'].max()
-            df['track_id_unique'] = df['track_id'] + (df['roinum'] - 1)*track_id_max
+
+        # if 'roinum' in df.columns:
+        #     track_id_max = df['track_id'].max()
+        #     df['track_id_unique'] = df['track_id'] + (df['roinum'] - 1)*track_id_max
 
     return df
 
