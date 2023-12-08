@@ -24,6 +24,7 @@ setuptools.setup(
         'tifffile',
         'napari[all]',
         'napari_animation',
+        'saspt',
         'scikit-image'
     ],
     classifiers=(
