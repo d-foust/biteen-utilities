@@ -55,6 +55,15 @@ def figs_to_pdf(figures, save_name):
         image_pdf.savefig(fig)
     image_pdf.close()
 
+def gauss_kernel(x, sigma):
+    """
+    Helper for smoothening polygons.
+    """
+    gk = np.exp(-x**2 / (2 * sigma**2))
+    gk[x==0] = 0
+    gk /= gk.sum()
+    return gk
+
 def labels_to_contours(labels, level=0.5):
     """
 
@@ -415,3 +424,28 @@ def plot_tracks(
             ax.add_artist(scalebar)
 
     return fig, ax
+
+def smooth_polygon(polygon, lam=0.39, mu=-0.4, N=500, sigma=1.5):
+    """
+
+    """
+    nv = len(polygon) - 1
+    I = np.identity(nv)
+    W = np.zeros(I.shape)
+    
+    x = np.arange(-nv//2, nv//2)
+    gk = gauss_kernel(x, sigma)
+    gk = np.roll(gk, -nv//2)
+    
+    for v in range(nv):
+        W[v,:] = gk
+        gk = np.roll(gk, 1)
+
+    K = I - W
+    smooth_operator = np.linalg.matrix_power(np.matmul((I - mu*K), (I - lam*K)), N)
+    polygon_smooth = np.matmul(smooth_operator, polygon[:-1]) # ignore second end
+    polygon_smooth = np.concatenate([polygon_smooth,
+                                    [polygon_smooth[0]]]) # make ends match
+    
+    return polygon_smooth
+
