@@ -17,15 +17,15 @@ setuptools.setup(
         'h5py',
         'hdf5storage',
         'matplotlib',
+        'matplotlib_scalebar',
+        'napari[all]',
+        'napari_animation',
         'nd2',
         'numpy',
         'pandas',
+        'scikit-image'
         'scipy',
         'tifffile',
-        'napari[all]',
-        'napari_animation',
-        'saspt',
-        'scikit-image'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",

@@ -1,7 +1,6 @@
 """
 
 """
-
 import napari as na
 from napari_animation import Animation
 
