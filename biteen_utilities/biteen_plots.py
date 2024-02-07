@@ -1,4 +1,5 @@
 """
+
 """
 import matplotlib as mpl
 from matplotlib.backends.backend_pdf import PdfPages
@@ -7,7 +8,31 @@ import matplotlib_scalebar.scalebar as sb
 import numpy as np
 import pandas as pd
 from skimage.measure import find_contours, regionprops
-    
+
+
+default_scalebar_props = {
+    'dx': 0.049,
+    'units': 'um',
+    'fixed_value': 4,
+    'scale_loc': 'none',
+    'location': 'lower left',
+    'frameon': False
+}
+
+transparent_rgba = mpl.colors.to_rgba('xkcd:white', alpha=0)
+black = mpl.colors.to_rgba('xkcd:black', alpha=1)
+hotmagenta_tr = mpl.colors.to_rgba('xkcd:hot magenta', alpha=0)
+hotmagenta_op = mpl.colors.to_rgba('xkcd:hot magenta', alpha=1)
+
+transparent2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('transparent2hotmagenta',
+                                                                   [hotmagenta_tr, hotmagenta_op],
+                                                                   512)
+
+black2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('black2hotmagenta',
+                                                                   [black, hotmagenta_op],
+                                                                   512)
+
+  
 def crop_to_labels(ax, labels, crop_buffer=5):
     """
     Set limits of ax so that only bounding box of labels is shown with crop_buffer number of
@@ -37,6 +62,7 @@ def crop_to_labels(ax, labels, crop_buffer=5):
     ax.set_xlim(left=xmin, right=xmax)
     ax.set_ylim(bottom=ymax, top=ymin)
 
+
 def figs_to_pdf(figures, save_name):
     """
     Save series of figures to pdf where each figure is on a single page.
@@ -44,6 +70,7 @@ def figs_to_pdf(figures, save_name):
     Parameters
     ----------
     figures : List[matplotlib figure objects]
+        List of figure handles.
     savename : str, Path
 
     Returns
@@ -55,6 +82,7 @@ def figs_to_pdf(figures, save_name):
         image_pdf.savefig(fig)
     image_pdf.close()
 
+
 def gauss_kernel(x, sigma):
     """
     Helper for smoothening polygons.
@@ -64,7 +92,8 @@ def gauss_kernel(x, sigma):
     gk /= gk.sum()
     return gk
 
-def labels_to_contours(labels, level=0.5):
+
+def labels_to_contours(labels, level=0.5, smooth=False, lam=0.39, mu=-0.4, N=500, sigma=1.5):
     """
 
     Parameters
@@ -83,9 +112,17 @@ def labels_to_contours(labels, level=0.5):
     for l in range(1, n_labels+1):
         label = labels == l
         contour = find_contours(label, level=level)
-        contours.append(contour)
+        contours.append(*contour)
+
+    if smooth == True:
+        contours = [smooth_polygon(contour, 
+                                   lam=lam, 
+                                   mu=mu, 
+                                   N=N, 
+                                   sigma=sigma) for contour in contours]
         
     return contours
+
 
 def plot_locs_gaussian():
     """
@@ -102,6 +139,7 @@ def plot_locs_gaussian():
     """
     pass
 
+
 def plot_locs_scatter(
         locs_df,
         coord_cols=('x', 'y'),
@@ -111,7 +149,9 @@ def plot_locs_scatter(
         crop = False,
         figure_props = {},
         marker_props = {},
-        scalebar_props = None
+        scalebar_props = None,
+        smooth = True,
+        smooth_parameters = {}
         ):
     """
     Plot single-molecule localization data as a scatter plot.
@@ -149,7 +189,7 @@ def plot_locs_scatter(
     xcol, ycol = coord_cols
 
     if labels is not None:
-        contours = labels_to_contours(labels)
+        contours = labels_to_contours(labels, smooth=smooth, **smooth_parameters)
     else:
         contours = []
 
@@ -165,18 +205,17 @@ def plot_locs_scatter(
     ax.imshow(image, cmap='binary_r')
     
     for contour in contours:
-        ax.plot(contour[0][:,1], contour[0][:,0], lw=1, alpha=0.5, color='xkcd:gray')
+        ax.plot(contour[:,1], contour[:,0], lw=1, alpha=0.5, color='xkcd:gray')
 
     ax.scatter(locs_df[xcol]*scale, locs_df[ycol]*scale, **marker_props)
             
-    if crop == True:
+    if crop == True and labels is not None:
         crop_to_labels(ax, labels)
     else:
-        ax.set_xlim(left=-0.5, right=image.shape[1]-0.5)
-        ax.set_ylim(bottom=image.shape[0]-0.5, top=-0.5)
+        ax.set_xlim(left=-0.5, right=image.shape[1] - 0.5)
+        ax.set_ylim(bottom=image.shape[0] - 0.5, top=-0.5)
 
     if scalebar_props is not None:
-        # add_scalebar(ax, scalebar_props)
         scalebar = sb.ScaleBar(**scalebar_props)
         ax.add_artist(scalebar)
 
@@ -184,27 +223,6 @@ def plot_locs_scatter(
 
     return fig, ax
 
-default_scalebar_props = {
-    'dx': 0.049,
-    'units': 'um',
-    'fixed_value': 4,
-    'scale_loc': 'none',
-    'location': 'lower left',
-    'frameon': False
-}
-
-transparent_rgba = mpl.colors.to_rgba('xkcd:white', alpha=0)
-black = mpl.colors.to_rgba('xkcd:black', alpha=1)
-hotmagenta_tr = mpl.colors.to_rgba('xkcd:hot magenta', alpha=0)
-hotmagenta_op = mpl.colors.to_rgba('xkcd:hot magenta', alpha=1)
-
-transparent2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('transparent2hotmagenta',
-                                                                   [hotmagenta_tr, hotmagenta_op],
-                                                                   512)
-
-black2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('black2hotmagenta',
-                                                                   [black, hotmagenta_op],
-                                                                   512)
 
 def plot_overlay(
         image_bgd: np.ndarray,
@@ -281,6 +299,7 @@ def plot_overlay(
     plt.tight_layout()
 
     return fig, ax
+
 
 def plot_tracks(
         locs_df,
@@ -425,6 +444,7 @@ def plot_tracks(
 
     return fig, ax
 
+
 def smooth_polygon(polygon, lam=0.39, mu=-0.4, N=500, sigma=1.5):
     """
 
@@ -448,4 +468,3 @@ def smooth_polygon(polygon, lam=0.39, mu=-0.4, N=500, sigma=1.5):
                                     [polygon_smooth[0]]]) # make ends match
     
     return polygon_smooth
-
