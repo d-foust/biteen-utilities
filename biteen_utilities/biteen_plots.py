@@ -181,7 +181,6 @@ def plot_locs_scatter(
     scalebar_props : dict
         Inputs to add_scalebar. If None provided (default), no scalebar is drawn.
         
-
     Returns
     -------
     fig, ax
