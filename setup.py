@@ -23,7 +23,7 @@ setuptools.setup(
         'nd2',
         'numpy',
         'pandas',
-        'scikit-image'
+        'scikit-image',
         'scipy',
         'tifffile',
     ],
