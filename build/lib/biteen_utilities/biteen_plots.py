@@ -33,7 +33,7 @@ black2hotmagenta = mpl.colors.LinearSegmentedColormap.from_list('black2hotmagent
                                                                    512)
 
   
-def crop_to_labels(ax, labels, crop_buffer=5):
+def crop_to_labels(ax, labels, crop_buffer=5, scale=1):
     """
     Set limits of ax so that only bounding box of labels is shown with crop_buffer number of
     pixels added to border.
@@ -43,7 +43,9 @@ def crop_to_labels(ax, labels, crop_buffer=5):
     ax : matplotlib axis handle
     labels : np.array, dtype=int
     crop_buffer : int
-        Extra pixels to leave around bounding box.
+        Extra pixels to leave around bounding box. Always in pixels even if scale is set.
+    scale : float
+        For converting pixel coordinates to other units.
 
     Returns
     -------
@@ -54,10 +56,10 @@ def crop_to_labels(ax, labels, crop_buffer=5):
     labels_bool = (labels > 0).astype('int')
     rowmin, colmin, rowmax, colmax = regionprops(labels_bool)[0]['bbox']
 
-    xmin = np.max([-0.5, colmin-crop_buffer-0.5])
-    xmax = np.min([colmax+crop_buffer+0.5, ncols_init-0.5])
-    ymin = np.max([-0.5, rowmin-crop_buffer-0.5])
-    ymax = np.min([rowmax+crop_buffer+0.5, nrows_init-0.5])
+    xmin = np.max([-0.5, colmin-crop_buffer-0.5]) * scale
+    xmax = np.min([colmax+crop_buffer+0.5, ncols_init-0.5]) * scale
+    ymin = np.max([-0.5, rowmin-crop_buffer-0.5]) * scale
+    ymax = np.min([rowmax+crop_buffer+0.5, nrows_init-0.5]) * scale
     
     ax.set_xlim(left=xmin, right=xmax)
     ax.set_ylim(bottom=ymax, top=ymin)

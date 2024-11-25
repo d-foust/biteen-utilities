@@ -364,7 +364,7 @@ def plot_tracks(
 
     if subsample is not None:
         idx_sub = np.random.choice(track_data.index, size=subsample, replace=False)
-        track_data = track_data.loc[idx_sub].reset_index()
+        track_data = track_data.loc[idx_sub].reset_index(drop=True)
 
     if labels is not None:
         contours = labels_to_contours(labels)
@@ -420,7 +420,7 @@ def plot_tracks(
         ax.axis('off')
 
         for contour in contours:
-            ax.plot(contour[0][:,1], contour[0][:,0], lw=1, alpha=0.5, color='xkcd:gray')
+            ax.plot(contour[:,1], contour[:,0], lw=1, alpha=0.5, color='xkcd:gray')
 
         if order == 'forward':
             i_bin = np.arange(n_bins, dtype=int)
