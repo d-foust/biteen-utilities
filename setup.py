@@ -6,7 +6,7 @@ with open("readme.md", "r") as f:
 
 setuptools.setup(
     name='biteen_utilities',
-    version='0.1.1',
+    version='0.1.2',
     author='Daniel Foust',
     author_email='djfoust@umich.edu',
     description='Tools for working with single-molecule localization data.',
