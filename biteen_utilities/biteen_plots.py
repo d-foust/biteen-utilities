@@ -10,7 +10,7 @@ import pandas as pd
 from skimage.measure import find_contours, regionprops
 
 
-default_scalebar_props = {
+DEFAULT_SCALEBAR_PROPS = {
     'dx': 0.049,
     'units': 'um',
     'fixed_value': 4,
@@ -235,7 +235,7 @@ def plot_overlay(
         cmap_bgd: str = "binary_r",
         cmap_fgd_solo: mpl.colors.LinearSegmentedColormap = black2hotmagenta,
         cmap_fgd_overlay: mpl.colors.LinearSegmentedColormap = transparent2hotmagenta,
-        scalebar_props: dict = default_scalebar_props
+        scalebar_props: dict = DEFAULT_SCALEBAR_PROPS
         ):
     """
     Creates figure with three axes for displaying two images and an overlay:
@@ -315,23 +315,29 @@ def plot_tracks(
         labels = None,
         image = None,
         subsample = None,
-        line_props = {},
+        line_props = None,
         separate = False,
         crop = False,
         figure_props = {},
-        scalebar_props = None
+        scalebar_props = None,
+        outline_props = None,
+        outline_smooth_factor = None
         ):
     """
     Plot single-molecule tracks.
 
     Parameters
     ----------
-    locs : pd.DataFrame
-        Localization data. Required columns: 'x', 'y', 'track_id'.
+    locs_df : pd.DataFrame
+        Localization data. At least 3 columns corresponding to x, y, and track_id.
     track_data : pd.DataFrame, optional
         Columns: 'track_id' + other values calculated for each track. Used to filter, choose color.
+    coord_cols : 2-tuple of strings
+        Columns in locs_df containing x, y positions of particles.
+    track_col : string
+    color_col : string
     track_data_bins : array_like
-        Nx2 array where each row defines a half open interval for categorizing 
+        Nx2 array where each row defines a half open interval for categorization of tracks.
     track_data_colors : iterable
     order : str
         'forward' or 'reverse'.
@@ -340,6 +346,7 @@ def plot_tracks(
         Used to convert localizations to units of pixels if not already.
     labels : 2d int array
         Segmentation data for cell, nuclei, etc.
+    image : 2d array
     subsample : int, default None
         Number of tracks to plot. If None, all tracks are plotted.
     line_props : dict, optional
@@ -347,6 +354,8 @@ def plot_tracks(
     crop : bool, default False
     figure_props : dict, optional
     scalebar_props : dict, optional
+    contour_props : dict
+    contour_smooth_factor : float
 
     Returns
     -------
@@ -355,6 +364,20 @@ def plot_tracks(
     ax
         Matplotlib axis handle(s).
     """
+    default_line_props = {
+        'alpha': 1,
+    }
+    if line_props is None: line_props = {}
+    line_props = {**default_line_props, **line_props}
+
+    default_outline_props = {
+        "lw": 1, 
+        "alpha": 0.5, 
+        "color": 'xkcd:gray'
+    }
+    if outline_props is None: outline_props = {}
+    outline_props = {**default_outline_props, **outline_props}
+
     xcol = coord_cols[0]
     ycol = coord_cols[1]
 
@@ -367,13 +390,16 @@ def plot_tracks(
         track_data = track_data.loc[idx_sub].reset_index(drop=True)
 
     if labels is not None:
-        contours = labels_to_contours(labels)
+        outlines = labels_to_contours(labels)
     else:
-        contours = []
+        outlines = []
+
+    if outline_smooth_factor is not None:
+        outlines = [smooth_polygon(outline, sigma=outline_smooth_factor) for outline in outlines]
 
     if image is None and labels is None:
-        colmax = int(np.max(locs_df[xcol]*scale)) + 1
-        rowmax = int(np.max(locs_df[ycol]*scale)) + 1
+        colmax = int(np.max(locs_df[xcol] * scale)) + 1
+        rowmax = int(np.max(locs_df[ycol] * scale)) + 1
         image = np.zeros([rowmax, colmax])
     elif image is None:
         image = np.zeros(labels.shape)
@@ -392,11 +418,8 @@ def plot_tracks(
             ax[i_ax].imshow(image, cmap='binary_r')
             ax[i_ax].axis('off')
 
-            for contour in contours:
-                ax[i_ax].plot(contour[0][:,1], contour[0][:,0],
-                            lw=1,
-                            alpha=0.5,
-                            color='xkcd:gray') # future: contour props
+            for outline in outlines:
+                ax[i_ax].plot(outline[0][:,1], outline[0][:,0], **outline_props) # future: contour props
             
             filt = (track_data[track_col] > l) & (track_data[track_col] <= h)
             for ti in track_data[track_col][filt]:
@@ -419,8 +442,8 @@ def plot_tracks(
         ax.imshow(image, cmap='binary_r')
         ax.axis('off')
 
-        for contour in contours:
-            ax.plot(contour[:,1], contour[:,0], lw=1, alpha=0.5, color='xkcd:gray')
+        for outline in outlines:
+            ax.plot(outline[:,1], outline[:,0], **outline_props)
 
         if order == 'forward':
             i_bin = np.arange(n_bins, dtype=int)
